@@ -244,7 +244,7 @@ inline int meanStdDev_32f1c(const uchar* src_data, size_t src_step, int width, i
         for ( ; j < width; ) {
             vl = __riscv_vsetvl_e8m1(width-j); // tail elements
             // Load src[row][i .. i+vl]
-            vfloat32m1_t pixel_vector1 = __riscv_vle32_v_f32m4_f32m_4_m(src_row1 + j, vl);
+            vfloat32m1_t pixel_vector1 = __riscv_vle32_v_f32m1(src_row1 + j, vl);
             vfloat32m1_t pixel_vector2 = __riscv_vle32_v_f32m1(src_row2 + j, vl);
             vfloat32m1_t pixel_vector3 = __riscv_vle32_v_f32m1(src_row3 + j, vl);
             vfloat32m1_t pixel_vector4 = __riscv_vle32_v_f32m1(src_row4 + j, vl);

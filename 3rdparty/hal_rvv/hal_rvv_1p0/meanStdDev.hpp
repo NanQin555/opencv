@@ -36,11 +36,10 @@ inline int meanStdDev_8u4c(const uchar* src_data, size_t src_step, int width, in
     double mean = 0.0, stddev = 0.0;
     for(size_t i=0; i<4; ++i) {
         const uchar* src_c = src_data + i;
-        double* cur_mean, *cur_stddev;
-        if(!stddev_val) cur_stddev = nullptr;
-        meanStdDev_8u1c(src_c, src_step, width, height, cur_mean, cur_stddev, mask, mask_step);
-        mean += *cur_mean;
-        if(!stddev_val) stddev += *cur_stddev;
+        if(!stddev_val)  
+            meanStdDev_8u1c(src_c, src_step, width, height, &mean, nullptr, mask, mask_step);
+        else
+            meanStdDev_8u1c(src_c, src_step, width, height, &mean, &stddev, mask, mask_step);
     }
     *mean_val = mean;
     *stddev_val = stddev;

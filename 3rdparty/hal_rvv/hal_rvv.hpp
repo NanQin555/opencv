@@ -24,5 +24,4 @@
 #include "hal_rvv_1p0/meanStdDev.hpp" // core
 #endif
 
-
 #endif

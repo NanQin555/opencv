@@ -7,6 +7,7 @@
 #include <functional>
 #include <vector>
 #include <iostream>
+#include <bitset>
 namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_meanStdDev
 #define cv_hal_meanStdDev cv::cv_hal_rvv::meanStdDev
@@ -231,9 +232,14 @@ inline int meanStdDev_8u4c(const uchar* src_data, size_t src_step, int width, in
 // test
 inline int meanStdDev_8u1c(const uchar* src_data, size_t src_step, int width, int height,
                             double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
+    std::cout << "mask: " ;
+    for(size_t n =0; n<64; ++n) {
+        std::cout << (bool)(mask[n]) << " ";
+    }
+    std::cout << std::endl;
     // initialize variables
     size_t total_count = 0;
-    size_t vl = __riscv_vsetvlmax_e8m1();
+    size_t vl = __riscv_vsetvlmax_e8m8();
     uint64_t sum = 0;
     std::cout << "height: " << height << " width: " << width << " src_step: " << src_step << " mask_step: " << mask_step << std::endl;
     vuint64m4_t vec_sum = __riscv_vmv_v_x_u64m4(0, vl);
@@ -247,7 +253,9 @@ inline int meanStdDev_8u1c(const uchar* src_data, size_t src_step, int width, in
         std::cout << "i:" << i << std::endl;
         const uchar* src_row = src_data + i * src_step;
         const uchar* mask_row = mask ? (mask + i * mask_step) : nullptr;
-        for (size_t j = 0 ; j < (size_t)width; j+=vl, total_count+=vl) {
+        size_t j = 0 ;
+        vl = __riscv_vsetvl_e8m1(width-j);
+        for ( ; j < (size_t)width; j+=vl) {
             vl = __riscv_vsetvl_e8m1(width-j); // tail elements
             std::cout << "j:" << j << " vl: " << vl << std::endl;
 
@@ -270,20 +278,23 @@ inline int meanStdDev_8u1c(const uchar* src_data, size_t src_step, int width, in
                 uint8_t maskdata[vl];
                 __riscv_vsm_v_b8(maskdata, mask_vector, vl);
                 std::cout << "mask_vector: ";
-                for(size_t k=0; k<vl; k++) {
+                for(size_t k=0; k<vl; ++k) {
                     std::cout  << (bool)maskdata[k] << " ";
                 }
                 std::cout  << std::endl;
                 // vec_s[0] <- sum(vec_u16m1_zero[0] , pixel_vector[*]) , if not masked
                 vec_s = __riscv_vwredsumu_vs_u8m1_u16m1_m(mask_vector, pixel_vector, u16_zero, vl);
+                total_count +=  __riscv_vcpop_m_b8(mask_vector, vl);
             }
             else {
                 // vec_s[0] <- sum(vec_u16m1_zero[0] , pixel_vector[*])
                 vec_s = __riscv_vwredsumu_vs_u8m1_u16m1(pixel_vector, u16_zero, vl);
+                total_count +=  vl;
             }
             auto temp_sum = __riscv_vmv_x_s_u16m1_u16(vec_s);
             sum += static_cast<uint64_t>(temp_sum);
-            std::cout << "temp_sum: " << temp_sum << " sum: " << sum << " total_count: " << total_count+vl << std::endl;
+            
+            std::cout << "temp_sum: " << temp_sum << " sum: " << sum << " total_count: " << total_count << std::endl;
 
         }
     }

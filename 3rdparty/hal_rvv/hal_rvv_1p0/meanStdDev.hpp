@@ -210,22 +210,11 @@ inline int meanStdDev(const uchar* src_data, size_t src_step, int width, int hei
 
 inline int meanStdDev_8uc1(const uchar* src_data, size_t src_step, int width, int height,
                             double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
-
-    // if(mask) {
-    //     std::cout << "mask: " ;
-    //     for(size_t n =0; n<64; ++n) {
-    //         std::cout << (bool)mask[n] << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
     size_t loop_unroll = 4;
     size_t loop_rem = height % loop_unroll;
     // initialize variables
     size_t total_count = 0;
     uint64_t sum = 0, sqsum = 0;
-
-    std::cout << "height: " << height << " width: " << width << " src_step: " << src_step << " mask_step: " << mask_step << std::endl;
-
     size_t vl = __riscv_vsetvlmax_e8m1();
     vuint16m1_t vec_sum = __riscv_vmv_v_x_u16m1(0, vl);
     vuint32m1_t vec_sqsum = __riscv_vmv_v_x_u32m1(0, vl);
@@ -310,7 +299,6 @@ inline int meanStdDev_8uc1(const uchar* src_data, size_t src_step, int width, in
                 auto temp_sqsum = __riscv_vmv_x_s_u32m1_u32(vec_sqsum);
                 sqsum += static_cast<uint64_t>(temp_sqsum);
             }
-            std::cout << "temp_sum: " << temp_sum << " sum: " << sum << " total_count: " << total_count << std::endl;
         }
     }
     vec_sum = __riscv_vmv_v_x_u16m1(0, vl);
@@ -331,33 +319,10 @@ inline int meanStdDev_8uc1(const uchar* src_data, size_t src_step, int width, in
             // Load src[row][i .. i+vl]
             vuint8m1_t pixel_vector = __riscv_vle8_v_u8m1(src_row + j, vl);
 
-            // // print pixel
-            // uint8_t data[vl];
-            // __riscv_vse8_v_u8m1(data, pixel_vector, vl);
-            // std::cout << "pixel_vector: ";
-            // for(size_t k=0; k<vl; k++) {
-            //     std::cout  << (int)data[k] << " ";
-            // }
-            // std::cout  << std::endl;
-
             if(mask) {
                 // Load mask[row][i .. i+vl]
                 vuint8m1_t mask_load = __riscv_vle8_v_u8m1(mask_row + j, vl);
                 vbool8_t mask_vector =  __riscv_vmsne_vx_u8m1_b8(mask_load, 0, vl);
-
-                // // print mask
-                // std::cout << "mask_load: ";
-                // for(size_t k=0; k<vl; ++k) {
-                //     std::cout << (bool)mask_row[k] << " ";
-                // }
-                // std::cout << std::endl;
-                // uchar maskdata[vl];
-                // __riscv_vsm_v_b8(maskdata, mask_vector, vl);
-                // std::cout << "mask_vector: ";
-                // for(size_t k=0; k<vl; ++k) {
-                //     std::cout  << (bool)maskdata[k] << " ";
-                // }
-                // std::cout  << std::endl;
 
                 vec_sum = __riscv_vwredsumu_vs_u8m1_u16m1_m(mask_vector, pixel_vector, u16_zero, vl);
                 if(stddev_val) {
@@ -380,7 +345,6 @@ inline int meanStdDev_8uc1(const uchar* src_data, size_t src_step, int width, in
                 auto temp_sqsum = __riscv_vmv_x_s_u32m1_u32(vec_sqsum);
                 sqsum += static_cast<uint64_t>(temp_sqsum);
             }
-            std::cout << "temp_sum: " << temp_sum << " sum: " << sum << " total_count: " << total_count << std::endl;
         }
     }
 
@@ -390,18 +354,14 @@ inline int meanStdDev_8uc1(const uchar* src_data, size_t src_step, int width, in
         if (stddev_val) *stddev_val = 0.0;
         return CV_HAL_ERROR_OK;
     }
-    std::cout << "sum: " << sum << "sqsum: " << sqsum << " total_count: " << total_count << std::endl;
     // Return values
     double mean = static_cast<double>(sum) / total_count;
     if (mean_val) {
         *mean_val = mean;
     }
-    std::cout << "mean: " << mean << std::endl;
     if (stddev_val) {
         double variance = std::max((sqsum / total_count) - (mean * mean), 0.0);
-        std::cout << "variance: " << variance << std::endl;
         double stddev = std::sqrt(variance);
-        std::cout << "stddev: " << stddev << std::endl;
         *stddev_val = stddev;
     }
     return CV_HAL_ERROR_OK;

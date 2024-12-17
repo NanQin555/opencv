@@ -191,30 +191,30 @@ inline int meanStdDev_8SC1(const uchar* src_data, size_t src_step, int width, in
     vint64m8_t vec_sqsum = __riscv_vmv_v_x_i64m8(0, vlmax);
     if(mask) {
         for (int i=0; i < height; ++i) {
-            const uchar* src_row = src_data + i * src_step;
+            const schar* src_row = reinterpret_cast<const schar*>(src_data) + i * src_step;
             const uchar* mask_row = mask + i * mask_step;
             int j = 0, vl;
             for ( ; j < width; j += vl) {
                 vl = __riscv_vsetvl_e8m1(width - j);
                 auto vec_pixel_i8 = __riscv_vle8_v_i8m1(src_row + j, vl);
                 auto vmask_u8 = __riscv_vle8_v_u8m1(mask + j, vl);
-                auto vec_pixel = __riscv_vzext_vf4(vec_pixel_i8, vl);
+                auto vec_pixel = __riscv_vsext_vf4(vec_pixel_i8, vl);
                 auto vmask = __riscv_vmseq_vx_u8m1_b8(vmask_u8, 1, vl);
                 vec_sum = __riscv_vwadd_wv_i64m8_tumu(vmask, vec_sum, vec_sum, vec_pixel, vl);
-                vec_sqsum = __riscv_vwmacc_vv_u64m8_tumu(vmask, vec_sqsum, vec_pixel, vec_pixel, vl);
+                vec_sqsum = __riscv_vwmacc_vv_i64m8_tumu(vmask, vec_sqsum, vec_pixel, vec_pixel, vl);
                 nz += __riscv_vcpop_m_b8(vmask, vl);
             }
         }
     } else {
         for (int i=0; i < height; ++i) {
-            const uchar* src_row = src_data + i * src_step;
+            const schar* src_row = reinterpret_cast<const schar*>(src_data) + i * src_step;
             int j = 0, vl;
             for ( ; j < width; j += vl) {
                 vl = __riscv_vsetvl_e8m1(width - j);
-                auto vec_pixel_i8 = __riscv_vle8_v_i8m1(src_row + j, vl);
-                auto vec_pixel = __riscv_vzext_vf4(vec_pixel_i8, vl);
+                auto vec_pixel_i8 = __riscv_vle8_v_i8m1(src_row + j, vl); // need char*
+                auto vec_pixel = __riscv_vsext_vf4(vec_pixel_i8, vl);
                 vec_sum = __riscv_vwadd_wv_i64m8_tu(vec_sum, vec_sum, vec_pixel, vl);
-                vec_sqsum = __riscv_vwmacc_vv_u64m8_tu(vec_sqsum, vec_pixel, vec_pixel, vl);
+                vec_sqsum = __riscv_vwmacc_vv_i64m8_tu(vec_sqsum, vec_pixel, vec_pixel, vl);
             }
         }
         nz = height * width;
@@ -242,6 +242,16 @@ inline int meanStdDev_8SC1(const uchar* src_data, size_t src_step, int width, in
     }
     return CV_HAL_ERROR_OK;
 
+}
+
+inline int meanStdDev_16UC1(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+inline int meanStdDev_16UC4(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
 inline int meanStdDev_32FC1(const uchar* src_data, size_t src_step, int width, int height,
@@ -302,6 +312,16 @@ inline int meanStdDev_32FC1(const uchar* src_data, size_t src_step, int width, i
         *stddev_val = stddev;
     }
     return CV_HAL_ERROR_OK;
+}
+
+inline int meanStdDev_32FC4(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+inline int meanStdDev_64FC1(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
 }}

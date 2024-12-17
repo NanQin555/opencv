@@ -67,7 +67,7 @@ inline int meanStdDev_8UC1(const uchar* src_data, size_t src_step, int width, in
             for ( ; j < width; j += vl) {
                 vl = __riscv_vsetvl_e8m1(width - j);
                 auto vec_pixel_u8 = __riscv_vle8_v_u8m1(src_row + j, vl);
-                auto vmask_u8 = __riscv_vle8_v_u8m1(mask_row+j, vl);
+                auto vmask_u8 = __riscv_vle8_v_u8m1(mask_row + j, vl);
                 auto vec_pixel = __riscv_vzext_vf4(vec_pixel_u8, vl);
                 auto vmask = __riscv_vmseq_vx_u8m1_b8(vmask_u8, 1, vl);
                 vec_sum = __riscv_vwaddu_wv_u64m8_tumu(vmask, vec_sum, vec_sum, vec_pixel, vl);
@@ -181,6 +181,67 @@ inline int meanStdDev_8UC4(const uchar* src_data, size_t src_step, int width, in
         stddev_val[3] = std::sqrt(std::max(((double)sqsum[3] / nz) - (mean_val[3] * mean_val[3]), 0.0));
     }
     return CV_HAL_ERROR_OK;
+}
+
+inline int meanStdDev_8SC1(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
+    int nz = 0;
+    int vlmax = __riscv_vsetvlmax_e64m8();
+    vint64m8_t vec_sum = __riscv_vmv_v_x_i64m8(0, vlmax);
+    vint64m8_t vec_sqsum = __riscv_vmv_v_x_i64m8(0, vlmax);
+    if(mask) {
+        for (int i=0; i < height; ++i) {
+            const uchar* src_row = src_data + i * src_step;
+            const uchar* mask_row = mask + i * mask_step;
+            int j = 0, vl;
+            for ( ; j < width; j += vl) {
+                vl = __riscv_vsetvl_e8m1(width - j);
+                auto vec_pixel_i8 = __riscv_vle8_v_i8m1(src_row + j, vl);
+                auto vmask_u8 = __riscv_vle8_v_u8m1(mask + j, vl);
+                auto vec_pixel = __riscv_vzext_vf4(vec_pixel_i8, vl);
+                auto vmask = __riscv_vmseq_vx_u8m1_b8(vmask_u8, 1, vl);
+                vec_sum = __riscv_vwadd_wv_i64m8_tumu(vmask, vec_sum, vec_sum, vec_pixel, vl);
+                vec_sqsum = __riscv_vwmacc_vv_u64m8_tumu(vmask, vec_sqsum, vec_pixel, vec_pixel, vl);
+                nz += __riscv_vcpop_m_b8(vmask, vl);
+            }
+        }
+    } else {
+        for (int i=0; i < height; ++i) {
+            const uchar* src_row = src_data + i * src_step;
+            int j = 0, vl;
+            for ( ; j < width; j += vl) {
+                vl = __riscv_vsetvl_e8m1(width - j);
+                auto vec_pixel_i8 = __riscv_vle8_v_i8m1(src_row + j, vl);
+                auto vec_pixel = __riscv_vzext_vf4(vec_pixel_i8, vl);
+                vec_sum = __riscv_vwadd_wv_i64m8_tu(vec_sum, vec_sum, vec_pixel, vl);
+                vec_sqsum = __riscv_vwmacc_vv_u64m8_tu(vec_sqsum, vec_pixel, vec_pixel, vl);
+            }
+        }
+        nz = height * width;
+    }
+    if (nz == 0) {
+        if (mean_val) *mean_val = 0.0;
+        if (stddev_val) *stddev_val = 0.0;
+        return CV_HAL_ERROR_OK;
+    }
+    auto zero = __riscv_vmv_s_x_i64m1(0, vlmax);
+    auto vec_red = __riscv_vmv_v_x_i64m1(0, vlmax);
+    auto vec_reddev = __riscv_vmv_v_x_i64m1(0, vlmax);
+    vec_red = __riscv_vredsum(vec_sum, zero, vlmax);
+    vec_reddev = __riscv_vredsum(vec_sqsum, zero, vlmax);
+    double sum = __riscv_vmv_x(vec_red);
+    double mean = sum / nz;
+    if (mean_val) {
+        *mean_val = mean;
+    }
+    if (stddev_val) {
+        double sqsum = __riscv_vmv_x(vec_reddev);
+        double variance = std::max((sqsum / nz) - (mean * mean), 0.0);
+        double stddev = std::sqrt(variance);
+        *stddev_val = stddev;
+    }
+    return CV_HAL_ERROR_OK;
+
 }
 
 inline int meanStdDev_32FC1(const uchar* src_data, size_t src_step, int width, int height,

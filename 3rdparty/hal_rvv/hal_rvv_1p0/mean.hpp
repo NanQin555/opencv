@@ -15,8 +15,18 @@ inline int meanStdDev_8UC1(const uchar* src_data, size_t src_step, int width, in
                             double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
 inline int meanStdDev_8UC4(const uchar* src_data, size_t src_step, int width, int height,
                             double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
+inline int meanStdDev_8SC1(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
+inline int meanStdDev_16UC1(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
+inline int meanStdDev_16UC4(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
 inline int meanStdDev_32FC1(const uchar* src_data, size_t src_step, int width, int height,
                             double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
+inline int meanStdDev_32FC4(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
+inline int meanStdDev_64FC1(const uchar* src_data, size_t src_step, int width, int height,
+                            double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);                   
 
 inline int meanStdDev(const uchar* src_data, size_t src_step, int width, int height,
                              int src_type, double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
@@ -26,8 +36,18 @@ inline int meanStdDev(const uchar* src_data, size_t src_step, int width, int hei
         return meanStdDev_8UC1(src_data, src_step, width, height, mean_val, stddev_val, mask, mask_step);
     case CV_8UC4:
         return meanStdDev_8UC4(src_data, src_step, width, height, mean_val, stddev_val, mask, mask_step);
+    case CV_8SC1:
+        return meanStdDev_8SC1(src_data, src_step, width, height, mean_val, stddev_val, mask, mask_step);
+    case CV_16UC1:
+        return meanStdDev_16UC1(src_data, src_step, width, height, mean_val, stddev_val, mask, mask_step);
+    case CV_16UC4:
+        return meanStdDev_16UC4(src_data, src_step, width, height, mean_val, stddev_val, mask, mask_step);
     case CV_32FC1:
         return meanStdDev_32FC1(src_data, src_step, width, height, mean_val, stddev_val, mask, mask_step);
+    case CV_32FC4:
+        return meanStdDev_32FC4(src_data, src_step, width, height, mean_val, stddev_val, mask, mask_step);
+    case CV_64FC1:
+        return meanStdDev_64FC1(src_data, src_step, width, height, mean_val, stddev_val, mask, mask_step);
     default:
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }

@@ -1334,12 +1334,12 @@ struct MeanStdDevOp : public BaseElemWiseOp
         cn = 0;
         context = 7;
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>& src, Mat& dst, const Mat& mask) override
     {
         dst.create(1, 2, CV_64FC4);
         cv::meanStdDev(src[0], dst.at<Scalar>(0,0), dst.at<Scalar>(0,1), mask);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) override
     {
         Mat temp;
         cvtest::convert(src[0], temp, CV_64F);
@@ -1357,7 +1357,7 @@ struct MeanStdDevOp : public BaseElemWiseOp
         dst.at<Scalar>(0,0) = mean;
         dst.at<Scalar>(0,1) = sqmean;
     }
-    double getMaxErr(int)
+    double getMaxErr(int) override
     {
         CV_Assert(cn > 0);
         double err = sqmeanRef[0];
@@ -1367,6 +1367,15 @@ struct MeanStdDevOp : public BaseElemWiseOp
     }
 };
 
+struct MeanStdDevMoreTypeOp : public MeanStdDevOp
+{
+    MeanStdDevMoreTypeOp() : MeanStdDevOp() {}
+    int getRandomType(RNG& rng) final
+    {
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1,
+                                  ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
+    }
+};
 
 struct NormOp : public BaseElemWiseOp
 {
@@ -1569,7 +1578,7 @@ TEST_P(ElemWiseTest, accuracy)
             cvtest::copy(dst, dst0);
         }
         op->generateScalars(depth, rng);
-
+        std::cout << cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << std::endl;
         op->refop(src, dst0, mask);
         op->op(src, dst, mask);
 
@@ -1631,7 +1640,8 @@ INSTANTIATE_TEST_CASE_P(Core_Log, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(
 
 INSTANTIATE_TEST_CASE_P(Core_CountNonZero, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CountNonZeroOp)));
 INSTANTIATE_TEST_CASE_P(Core_Mean, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new MeanOp)));
-INSTANTIATE_TEST_CASE_P(Core_MeanStdDev, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new MeanStdDevOp)));
+INSTANTIATE_TEST_CASE_P(Core_MeanStdDev, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new MeanStdDevMoreTypeOp)));
+// INSTANTIATE_TEST_CASE_P(Core_MeanStdDev, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new MeanStdDevOp)));
 INSTANTIATE_TEST_CASE_P(Core_Sum, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new SumOp)));
 INSTANTIATE_TEST_CASE_P(Core_Norm, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new NormOp)));
 INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new MinMaxLocOp)));
@@ -2807,6 +2817,21 @@ TEST(Core_MeanStdDev, regression_multichannel)
         Mat src(1, 2, CV_MAKETYPE(CV_8U, 8), buf);
         Mat ref_m(8, 1, CV_64FC1, ref_buf);
         Mat ref_sd(8, 1, CV_64FC1, ref_buf + 8);
+        Mat dst_m, dst_sd;
+        meanStdDev(src, dst_m, dst_sd);
+        EXPECT_EQ(0, cv::norm(dst_m, ref_m, NORM_L1));
+        EXPECT_EQ(0, cv::norm(dst_sd, ref_sd, NORM_L1));
+    }
+}
+
+TEST(Core_MeanStdDev_nx1, regression_multichannel)
+{
+    {
+        uchar buf[] = { 1, 2, 3, 4, 5, 6 };
+        double ref_buf[] = { 3.5, 1.707825127659933 };
+        Mat src(6, 1, CV_MAKETYPE(CV_8U, 1), buf);
+        Mat ref_m(1, 1, CV_64FC1, ref_buf);
+        Mat ref_sd(1, 1, CV_64FC1, ref_buf + 1);
         Mat dst_m, dst_sd;
         meanStdDev(src, dst_m, dst_sd);
         EXPECT_EQ(0, cv::norm(dst_m, ref_m, NORM_L1));

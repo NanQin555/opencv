@@ -85,6 +85,41 @@ PERF_TEST_P(Size_MatType, meanStdDev_mask, TYPICAL_MATS)
     SANITY_CHECK(dev, 1e-5);
 }
 
+PERF_TEST_P(Size_MatType, meanStdDev_moretype, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ), testing::Values( CV_8SC1, CV_16UC1, CV_16UC4, CV_32FC4, CV_64FC1 ) ))
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+
+    Mat src(sz, matType);
+    Scalar mean;
+    Scalar dev;
+
+    declare.in(src, WARMUP_RNG).out(mean, dev);
+
+    TEST_CYCLE() meanStdDev(src, mean, dev);
+
+    SANITY_CHECK(mean, 1e-5, ERROR_RELATIVE);
+    SANITY_CHECK(dev, 1e-5, ERROR_RELATIVE);
+}
+
+PERF_TEST_P(Size_MatType, meanStdDev_mask_moretype, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ), testing::Values( CV_8SC1, CV_16UC1, CV_16UC4, CV_32FC4, CV_64FC1 ) ))
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+
+    Mat src(sz, matType);
+    Mat mask = Mat::ones(sz, CV_8U);
+    Scalar mean;
+    Scalar dev;
+
+    declare.in(src, WARMUP_RNG).in(mask).out(mean, dev);
+
+    TEST_CYCLE() meanStdDev(src, mean, dev, mask);
+
+    SANITY_CHECK(mean, 1e-5);
+    SANITY_CHECK(dev, 1e-5);
+}
+
 PERF_TEST_P(Size_MatType, countNonZero, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ), testing::Values( CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1 ) ))
 {
     Size sz = get<0>(GetParam());

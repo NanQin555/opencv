@@ -1160,7 +1160,7 @@ public:
                 int bcols = std::min(bcols0, dst->cols - x);
                 Mat dpart(*dst, Rect(x, y, bcols, brows));
                 Mat bufxy(_bufxy, Rect(0, 0, bcols, brows));
-
+                // todo
                 if( nnfunc )
                 {
                     if( m1->type() == CV_16SC2 && m2->empty() ) // the data is already in the right format
@@ -1244,6 +1244,7 @@ public:
                         for( ; x1 < bcols; x1++ )
                             A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
+
                     else if( planar_input )
                     {
                         const float* sX = m1->ptr<float>(y+y1) + x;

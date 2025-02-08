@@ -84,8 +84,6 @@ static int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha
     return CV_HAL_ERROR_OK;
 }
 
-static int remap32f()
-
 } // cv_hal_rvv::
 } // cv::
 

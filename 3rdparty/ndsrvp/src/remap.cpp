@@ -9,10 +9,10 @@
 namespace cv {
 
 namespace ndsrvp {
-
 int remap32f(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
-    uchar* dst_data, size_t dst_step, int dst_width, int dst_height, float* mapx, size_t mapx_step,
-    float* mapy, size_t mapy_step, int interpolation, int border_type, const double border_value[4])
+    uchar* dst_data, size_t dst_step, int dst_width, int dst_height, 
+    float* mapx, size_t mapx_step, float* mapy, size_t mapy_step, 
+    int interpolation, int border_type, const double border_value[4])
 {
     const bool isRelative = ((interpolation & CV_HAL_WARP_RELATIVE_MAP) != 0);
     interpolation &= ~CV_HAL_WARP_RELATIVE_MAP;

@@ -374,8 +374,15 @@ inline int hal_ni_remap32f(int src_type, const uchar *src_data, size_t src_step,
                            int interpolation, int border_type, const double border_value[4])
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
+inline int hal_ni_remap16s(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                           uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+                           short* mapx, size_t mapx_step, int mapy_type, short* mapy, size_t mapy_step,
+                           int interpolation, int border_type, const double border_value[4])
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
 //! @cond IGNORED
 #define cv_hal_remap32f hal_ni_remap32f
+#define cv_hal_remap16s hal_ni_remap16s
 //! @endcond
 
 /**

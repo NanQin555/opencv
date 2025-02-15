@@ -337,7 +337,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
     size_t sstep = _src.step/sizeof(S0[0]);
 
     for(int k = 0; k < cn; k++ )
-        cval[k] = saturate_cast<T>(_borderValue[k & 3]);·
+        cval[k] = saturate_cast<T>(_borderValue[k & 3]);
 
     unsigned width1 = ssize.width, height1 = ssize.height;
 
@@ -1821,11 +1821,12 @@ void cv::remap( InputArray _src, OutputArray _dst,
         CALL_HAL(remap32f, cv_hal_remap32f, src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                  map1.ptr<float>(), map1.step, map2.ptr<float>(), map2.step, interpolation, borderType, borderValue.val);
     }
-    else if((map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1 || map2.empty())) ||
-            (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.type() == CV_16SC1 || map1.empty())))
+    else if(interpolation == INTER_NEAREST &&
+           ((map1.type() == CV_16SC2 &&  map2.empty()) ||
+           (map2.type() == CV_16SC2 &&  map1.empty())))
     {
         if( map1.type() != CV_16SC2 )
-            std::swap(m1, m2);
+            std::swap(map1, map2);
         CALL_HAL(remap16s, cv_hal_remap16s, src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                  map1.ptr<short>(), map1.step, map2.type(), map2.ptr<short>(), map2.step, interpolation, borderType, borderValue.val);      
     }
@@ -2272,12 +2273,6 @@ public:
                 int bh = std::min( bh0, range.end - y);
 
                 Mat _XY(bh, bw, CV_16SC2, XY);
-                // XY = 映射表
-                // x,y  dst->src dst[0] = (1,2) ; dst[0][0] -> src[1][2]
-
-                // CV_32FC1
-                // mapx mapy 
-                // dst[0][0] = src[mapx[0]][mapy[0]];
 
                 Mat dpart(dst, Rect(x, y, bw, bh));
 

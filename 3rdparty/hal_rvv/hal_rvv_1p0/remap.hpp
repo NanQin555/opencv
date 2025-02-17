@@ -1,24 +1,26 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-#ifndef OPENCV_HAL_RVV_WARPAFFINE_HPP_INCLUDED
-#define OPENCV_HAL_RVV_WARPAFFINE_HPP_INCLUDED
+#ifndef OPENCV_HAL_RVV_REMAP_HPP_INCLUDED
+#define OPENCV_HAL_RVV_REMAP_HPP_INCLUDED
 
 #include <riscv_vector.h>
 #include <cassert>
 #include <iostream>
-#include "opencv2/imgproc/hal/interface.h"
-#include "opencv2/core/hal/interface.h"  
+
+#include "../../modules/imgproc/include/opencv2/imgproc/hal/interface.h"
+#include "opencv2/core/hal/interface.h"
 
 namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_remap32f
 #define cv_hal_remap32f cv::cv_hal_rvv::remap32f
-
+#undef cv_hal_remap16s
+#define cv_hal_remap16s cv::cv_hal_rvv::remap16s
 // todo 
 #define OPENCV_HAL_IMPL_RISCV_CLIP(_Tp, x, num) \
 inline __riscv_v##_Tp##x##num clip(v_##_Tp##x##num2 x, int a, int b) \
 { \
-} \
+} 
 
 static inline vint16m8_t clip(vint16m8_t x, int a, int b, int vl) {
     x = __riscv_vmax_vx_i16m8(x, a, vl); 
@@ -160,8 +162,8 @@ static void remapNearest(int src_type, const uchar* src_data, size_t src_step, i
             {
                 vl = __riscv_vsetvl_e8m4(dst_height - x);
 
-                auto mapx_vector = __riscv_vle8_v_i16m8(mapx, vl);
-                auto mapy_vector = __riscv_vle8_v_i16m8(mapy, vl); 
+                auto mapx_vector = __riscv_vle16_v_i16m8(mapx, vl);
+                auto mapy_vector = __riscv_vle16_v_i16m8(mapy, vl); 
                 auto mapx_mask = __riscv_vmslt_vx_i16m8_b2(mapx_vector, src_width, vl);
                 auto mapy_mask = __riscv_vmslt_vx_i16m8_b2(mapy_vector, src_height, vl);
                 auto map_mask = __riscv_vand_vv(mapx_mask, mapy_mask, vl);
@@ -195,7 +197,7 @@ static void remapNearest(int src_type, const uchar* src_data, size_t src_step, i
                     else 
                     {
                         mapx_vector = borderInterpolate(mapx_vector, src_width, border_type, vl);
-                        mapy_vector = borderInterpolate(mapy_step, src_height, border_type, vl);
+                        mapy_vector = borderInterpolate(mapy_vector, src_height, border_type, vl);
                     }
                     index_vector = __riscv_vmul_vx_i16m8_tumu(map_mask, index_vector, mapy_vector, sstep, vl);
                     index_x = __riscv_vmul_vx_i16m8_tumu(map_mask, index_x, mapx_vector, cn, vl);
@@ -206,7 +208,7 @@ static void remapNearest(int src_type, const uchar* src_data, size_t src_step, i
                 auto S0_vector = __riscv_vmv_v_x_u8m4(0, vl);
                 for(int k = 0; k <  cn; ++k)
                 {
-                    S0_vector = __riscv_vloxei32_v_u8m4(S0 + cn - 1, index_vector, vl);
+                    S0_vector = __riscv_vloxei16_v_u8m4(S0 + cn - 1, index_vector, vl);
                     __riscv_vsse8_v_u8m4(D + cn - 1, sizeof(uchar)*cn, S0_vector, vl);
                 }
             }
@@ -215,31 +217,31 @@ static void remapNearest(int src_type, const uchar* src_data, size_t src_step, i
     }
 }
 
-#undef cv_hal_remap16s
-#define cv_hal_remap16s cv::cv_hal_rvv::remap16s
-// mapx_type = CV_16SC2
+
 static int remap16s(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
     uchar* dst_data, size_t dst_step, int dst_width, int dst_height, 
     short* mapx, size_t mapx_step, int mapy_type, short* mapy, size_t mapy_step, 
     int interpolation, int border_type, const double border_value[4]) 
 {
+    std::cout << "remap rvv" << std::endl;
     const bool isRelative = ((interpolation & CV_HAL_WARP_RELATIVE_MAP) != 0);
     interpolation &= ~CV_HAL_WARP_RELATIVE_MAP;
 
-    if( interpolation != CV_HAL_INTER_NEAREST )
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if( interpolation != CV_HAL_INTER_NEAREST ) {
+        std::cout << "RVV_HAL: not nearest!" << std::endl;
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
 
     if( interpolation == CV_HAL_INTER_AREA )
         interpolation = CV_HAL_INTER_LINEAR;
 
-    if( (mapy_type != CV_16SC1) )
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    std::cout << "RVV_HAL: run function remap16s!" << std::endl;
 
     // mapxy -> mapx, mapy
     int vl, step = mapx_step/sizeof(mapx[0]);
     for(int x = 0; x < mapx_step; x += vl)
     {
-        vl = __riscv_vsetvl_i16m8(mapx_step - x);
+        vl = __riscv_vsetvl_e16m8(mapx_step - x);
         auto vx = __riscv_vlse16_v_i16m8(mapx, sizeof(short)*2, vl);
         auto vy = __riscv_vlse16_v_i16m8(mapx + 1, sizeof(short)*2, vl);
         __riscv_vse16_v_i16m8(mapx, vx, vl);
@@ -250,11 +252,22 @@ static int remap16s(int src_type, const uchar* src_data, size_t src_step, int sr
     int depth = CV_MAT_DEPTH(src_type);
     switch(depth) 
     {
-        case: CV_8U
-        remapNearest(src_type, src_data, src_step, src_width, src_height,
-                     dst_data, dst_step, dst_width, dst_height, 
-                     mapx, mapx_step/2, mapy, mapx_step/2, border_type, border_value[4]);
+        case CV_8U:
+            remapNearest(src_type, src_data, src_step, src_width, src_height,
+                        dst_data, dst_step, dst_width, dst_height, 
+                        mapx, mapx_step/2, mapy, mapx_step/2, border_type, border_value);
+            break;
     }
+    return CV_HAL_ERROR_OK;
+}
+
+static int remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                           uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+                           float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
+                           int interpolation, int border_type, const double border_value[4])
+{ 
+    std::cout << "HAL_RVV: remap32f" << std::endl;
+    return CV_HAL_ERROR_NOT_IMPLEMENTED; 
 }
 
 } // cv_hal_rvv::
